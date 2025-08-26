@@ -1,0 +1,74 @@
+#!/bin/bash
+# Iterate over experimental settings and start experiments
+source experimentconfig.sh
+python3 ${EXPERIMENTFOLDER}/loop_functions/generate_source_pos.py
+
+DATAFOLDER="$EXPERIMENTFOLDER/results/data"
+
+##################################################################################
+### Set a value for any parameter in experimentconfig.sh
+### USAGE:   config "parameter" value
+### EXAMPLE: config "NUMROBOTS" 10 
+config() {
+	sed -i "s/^export ${1}=.*/export ${1}=${2}/" experimentconfig.sh
+}
+
+##################################################################################
+### Set a value for any parameter in the loop_params.py dictionaries
+### USAGE:   loopconfig "dictionary" "parameter" value
+### EXAMPLE: loopconfig "patches" "radius" 0.05 
+loopconfig() {
+	sed -i "/\['${1}'\]\['${2}'\]/ s/=.*/= ${3}/" loop_functions/loop_params.py
+}
+
+##################################################################################
+### Copy a configuration from a previously run experiment in the results folder.
+### USAGE:   copy "experimentName/configName"
+### EXAMPLE: copy "test116_patchy/20_blockchain1"
+copy() {
+	# Collect the config from results
+	cp $DATAFOLDER/experiment_${1}/001/experimentconfig.sh .
+	cp $DATAFOLDER/experiment_${1}/001/controller_params.py controllers/
+	cp $DATAFOLDER/experiment_${1}/001/loop_function_params.py loop_functions/
+}
+
+
+##################################################################################
+### Run an experiment for the number of repetitions given in experimentconfig.sh
+### USAGE:   run "experimentName/configName"
+### EXAMPLE: run "test116_patchy/20_blockchain1"
+run() {
+
+	# Configure experiment
+	. experimentconfig.sh
+
+
+  for REP in $(seq 1 ${REPS}); do
+    echo "Runing experiment ${1}"
+
+    # Perform experiment with visualization
+    . starter -r -s
+
+    # Perform experiment without visualization
+    #. starter -r -sz
+
+    # Collect data
+    if [ $# -eq 1 ]; then
+        bash collect-logs ${1}
+    fi
+
+  done
+
+}
+
+
+
+
+#DEFINE EXPERIMENT
+EXP=landmark_exploration
+CFG=TEST
+config "NUMM" 0 #number of malicious robot
+config "REPS" 1
+config "LENGTH" 10000
+config "NOTES" "\"Grand arena 3 landmarks experiment, with 1 malicious robot\""
+run   "${EXP}/${CFG}"
